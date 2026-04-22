@@ -10,12 +10,24 @@ $MicrosoftOwnedPublisherIds = @(
     '72f988bf-86f1-41af-91ab-2d7cd011db47'
 )
 
+$ErrorActionPreference = 'Stop'
+
 $requiredModules = @('Microsoft.Graph.Authentication', 'Microsoft.Graph.Applications')
 foreach ($module in $requiredModules) {
     if (-not (Get-Module -ListAvailable -Name $module)) {
         throw "Required module '$module' is not installed. Run: Install-Module $module -Scope CurrentUser"
     }
-    Import-Module $module -ErrorAction Stop
+    try {
+        Import-Module $module -ErrorAction Stop
+    } catch {
+        Write-Error ("Failed to import '{0}': {1}" -f $module, $_.Exception.Message)
+        if ($PSVersionTable.PSEdition -eq 'Desktop') {
+            Write-Host 'Tip: Windows PowerShell 5.1 often hits assembly conflicts between ExchangeOnlineManagement and Microsoft.Graph.' -ForegroundColor Yellow
+            Write-Host '     Use PowerShell 7 (pwsh) in a fresh session, or reinstall Graph with:' -ForegroundColor Yellow
+            Write-Host '     Install-Module Microsoft.Graph.Authentication, Microsoft.Graph.Applications -Scope CurrentUser -Force -AllowClobber' -ForegroundColor Yellow
+        }
+        throw
+    }
 }
 
 $connectParams = @{ Scopes = 'Application.Read.All', 'Directory.Read.All'; NoWelcome = $true }
